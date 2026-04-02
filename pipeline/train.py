@@ -149,7 +149,7 @@ def train(df: pd.DataFrame) -> dict:
 
     # Serializar modelo
     joblib.dump(final_model, MODEL_PATH)
-    logger.info("✅ Modelo guardado: %s", MODEL_PATH)
+    logger.info("OK Modelo guardado: %s", MODEL_PATH)
 
     # Metadata
     meta = {
@@ -171,6 +171,6 @@ def train(df: pd.DataFrame) -> dict:
         },
     }
     META_PATH.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
-    logger.info("✅ Metadata guardada: %s", META_PATH)
+    logger.info("OK Metadata guardada: %s", META_PATH)
 
     return meta
