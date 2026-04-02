@@ -38,6 +38,7 @@ from pipeline.train import train
 from pipeline.evaluate import print_evaluation_report, export_predictions_csv
 
 # ── Logging ────────────────────────────────────────────────
+Path("logs").mkdir(exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",

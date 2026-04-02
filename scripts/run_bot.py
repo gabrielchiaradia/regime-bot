@@ -31,6 +31,7 @@ from inference.classifier import RegimeClassifier
 from orchestrator.router import build_default_router, REGIME_NAMES
 
 # ── Logging ────────────────────────────────────────────────
+Path("logs").mkdir(exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
