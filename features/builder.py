@@ -259,7 +259,7 @@ def build_features(
     if dropped > 0:
         logger.warning("Eliminadas %d filas con NaN en features", dropped)
 
-    logger.info("Features construidas: %d filas, %d features | %s → %s",
+    logger.info("Features construidas: %d filas, %d features | %s - %s",
                 len(df), len(feature_cols),
                 df.index[0].strftime("%Y-%m-%d"),
                 df.index[-1].strftime("%Y-%m-%d"))

@@ -67,7 +67,8 @@ def label_regimes(df: pd.DataFrame) -> pd.DataFrame:
     low        = df["low"]
     open_price = df["open"]
     mecha      = high - low
-    cuerpo     = (close - open_price).abs().replace(0, atr_curr)  # evitar div/0
+    cuerpo_raw = (close - open_price).abs()
+    cuerpo     = cuerpo_raw.where(cuerpo_raw > 0, atr_curr)  # evitar div/0
     cond_mecha_caotica = mecha > (0.5 * cuerpo)
     cond_vol_spike = (atr_ratio > ATR_SPIKE_MULTIPLIER) & cond_mecha_caotica
 

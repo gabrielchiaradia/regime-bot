@@ -95,7 +95,7 @@ def main() -> None:
     try:
         df_3m, df_15m = fetch_training_data(symbol=args.symbol, days=args.days)
     except Exception as e:
-        msg = f"❌ Error descargando datos: {e}"
+        msg = f"ERROR descargando datos: {e}"
         logger.error(msg)
         _send_telegram(msg)
         sys.exit(1)
@@ -105,7 +105,7 @@ def main() -> None:
     try:
         df_features = build_features(df_3m, df_15m)
     except Exception as e:
-        msg = f"❌ Error calculando features: {e}"
+        msg = f"ERROR calculando features: {e}"
         logger.error(msg)
         _send_telegram(msg)
         sys.exit(1)
@@ -115,7 +115,7 @@ def main() -> None:
     try:
         df_labeled = label_regimes(df_features)
     except Exception as e:
-        msg = f"❌ Error en el labeler: {e}"
+        msg = f"ERROR en el labeler: {e}"
         logger.error(msg)
         _send_telegram(msg)
         sys.exit(1)
@@ -138,12 +138,12 @@ def main() -> None:
         meta = train(df_labeled)
     except ValueError as e:
         # Accuracy por debajo del umbral — modelo NO guardado
-        msg = f"⚠️ Modelo no guardado: {e}"
+        msg = f"WARN Modelo no guardado: {e}"
         logger.warning(msg)
         _send_telegram(msg)
         sys.exit(0)  # No es un error fatal — el bot sigue con el .pkl anterior
     except Exception as e:
-        msg = f"❌ Error en entrenamiento: {e}"
+        msg = f"ERROR en entrenamiento: {e}"
         logger.error(msg, exc_info=True)
         _send_telegram(msg)
         sys.exit(1)
@@ -156,7 +156,7 @@ def main() -> None:
     acc = meta.get("test_accuracy", 0)
     cv  = meta.get("cv_accuracy_mean", 0)
     msg = (
-        f"✅ Modelo re-entrenado exitosamente\n"
+        f"OK Modelo re-entrenado exitosamente\n"
         f"  Símbolo: {args.symbol} | {args.days} días\n"
         f"  Test accuracy: {acc:.3f}\n"
         f"  CV accuracy:   {cv:.3f}"
