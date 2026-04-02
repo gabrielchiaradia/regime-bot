@@ -61,11 +61,14 @@ def _fetch_klines(
         if not data:
             break
 
+        # Guardar el open_time ANTES del prepend (después data[0] sería el acumulado)
+        first_open_time = int(data[0][0])
+
         all_rows = data + all_rows  # prepend: los más antiguos primero
         remaining -= len(data)
 
         # Siguiente página: terminar justo antes del open de la primera vela recibida
-        current_end = int(data[0][0]) - 1
+        current_end = first_open_time - 1
 
         if len(data) < limit:
             break  # Binance no tiene más historia
