@@ -1,0 +1,40 @@
+services:
+
+  # ── Contenedor A: Trainer ─────────────────────────────
+  # Re-entrena el modelo semanalmente (domingos 02:00 UTC)
+  # Para forzar ejecución inmediata: docker compose run --rm regime-trainer
+  regime-trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.trainer
+    container_name: regime-trainer
+    env_file: .env
+    environment:
+      - RUN_MODE=cron        # cambiar a 'once' para forzar ejecución
+    volumes:
+      - regime_models:/app/models   # compartido con el bot
+      - regime_logs:/app/logs
+    restart: unless-stopped
+
+  # ── Contenedor B: Bot de Inferencia ───────────────────
+  # Opera 24/7 usando el último .pkl disponible
+  # Recarga el modelo automáticamente si cambia en disco
+  regime-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: regime-bot
+    env_file: .env
+    volumes:
+      - regime_models:/app/models   # compartido con el trainer (read)
+      - regime_logs:/app/logs
+    depends_on:
+      - regime-trainer
+    restart: unless-stopped
+
+# ── Volumen compartido (modelo .pkl) ──────────────────────
+volumes:
+  regime_models:
+    driver: local
+  regime_logs:
+    driver: local
