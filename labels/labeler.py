@@ -92,7 +92,7 @@ def label_regimes(df: pd.DataFrame) -> pd.DataFrame:
         pct = counts.get(r, 0) / total * 100
         if pct < 5:
             logger.warning(
-                "⚠️  Régimen %d tiene solo %.1f%% de los datos — "
+                "WARN Régimen %d tiene solo %.1f%% de los datos — "
                 "el modelo puede tener dificultades para aprenderlo. "
                 "Considerar ajustar umbrales ADX/ATR.",
                 r, pct

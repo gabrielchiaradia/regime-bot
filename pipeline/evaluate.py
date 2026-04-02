@@ -108,7 +108,8 @@ def export_predictions_csv(
          "atr_current", "atr_prev_day_mean", "_atr_ratio",
          "target_regime"]
     )
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     available = [c for c in cols if c in df.columns]
     sample = df[available].tail(500)
-    sample.to_csv(output_path)
+    sample.to_csv(output_path, encoding="utf-8-sig")  # utf-8-sig para Excel en Windows
     logger.info("Muestra exportada: %s (%d filas)", output_path, len(sample))
