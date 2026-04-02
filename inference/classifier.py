@@ -46,6 +46,7 @@ MODEL_PATH           = MODELS_DIR / "regime_model.pkl"
 META_PATH            = MODELS_DIR / "regime_model_meta.json"
 REGIME_CONFIRMATION  = int(os.getenv("REGIME_CONFIRMATION", "3"))   # velas para confirmar cambio
 WARMUP_CANDLES_LIVE  = int(os.getenv("WARMUP_CANDLES_LIVE", "250")) # warmup para inferencia
+REGIME2_PROBA_THRESHOLD = float(os.getenv("REGIME2_PROBA_THRESHOLD", "0.70"))  # confianza mínima para activar Régimen 2
 
 REGIME_NAMES = {
     0: "LATERAL",
@@ -205,13 +206,28 @@ class RegimeClassifier:
             logger.warning("NaN en features: %s → manteniendo régimen actual", nan_cols)
             return self._current_regime
 
-        prediction = int(self._model.predict(last_row)[0])
         proba      = self._model.predict_proba(last_row)[0]
+        raw_pred   = int(self._model.predict(last_row)[0])
+
+        # ── Probability Thresholding para Régimen 2 ───────
+        # El modelo solo activa Régimen 2 si está >= REGIME2_PROBA_THRESHOLD seguro.
+        # Evita los ~387 falsos pánicos donde confunde tendencia fuerte con volatilidad.
+        # Si la confianza en Régimen 2 es baja → caer al segundo más probable (0 o 1).
+        if raw_pred == 2 and proba[2] < REGIME2_PROBA_THRESHOLD:
+            # Elegir entre Régimen 0 y 1 según cuál tiene mayor probabilidad
+            prediction = 0 if proba[0] >= proba[1] else 1
+            logger.debug(
+                "Régimen 2 rechazado (proba=%.2f < umbral=%.2f) → fallback a Régimen %d",
+                proba[2], REGIME2_PROBA_THRESHOLD, prediction
+            )
+        else:
+            prediction = raw_pred
 
         logger.debug(
-            "Raw prediction: %s | proba=[L:%.2f T:%.2f V:%.2f] | candidato=%s×%d",
+            "Raw: %s (p2=%.2f) | Final: %s | candidato=%s×%d",
+            REGIME_NAMES.get(raw_pred, raw_pred),
+            proba[2],
             REGIME_NAMES.get(prediction, prediction),
-            proba[0], proba[1], proba[2],
             REGIME_NAMES.get(self._candidate_regime, self._candidate_regime),
             self._candidate_count,
         )

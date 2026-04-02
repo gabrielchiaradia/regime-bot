@@ -238,9 +238,12 @@ def build_features(
     df["bb_lower"] = bb_lower
     df["ema_50"]   = df["close"].ewm(span=50, adjust=False).mean()
 
-    # ATR ratio como feature explícita (clave para Régimen 2)
-    # Anti-leakage: usa atr_prev_day_mean que ya está shifteado
-    df["feature_atr_ratio"] = atr14 / daily_atr_mean.replace(0, np.nan)
+    # ADX Slope: pendiente del ADX en las últimas 3 velas (normalizada)
+    # Captura la ACELERACIÓN de la tendencia — diferencia mechazo de rally ordenado:
+    #   Pánico:   ATR explota pero ADX tarda en reaccionar → slope bajo con vol alta
+    #   Tendencia: ADX sube gradualmente junto con el ATR → slope positivo sostenido
+    adx_series = df["feature_adx"]
+    df["feature_adx_slope"] = _rsi_slope(adx_series, window=3)  # misma lógica que RSI slope
 
     # ── 4. Merge con micro-estructura de 3m ───────────────
     df = df.join(micro_features, how="left", rsuffix="_3m")

@@ -56,8 +56,20 @@ def label_regimes(df: pd.DataFrame) -> pd.DataFrame:
     # ── Condiciones individuales ───────────────────────────
 
     # Régimen 2: spike de volatilidad (prioridad máxima)
-    atr_ratio = atr_curr / atr_prev.replace(0, np.nan)
-    cond_vol_spike = atr_ratio > ATR_SPIKE_MULTIPLIER
+    # Condición doble: ATR spike + estructura de vela caótica
+    #   1. ATR actual > N× ATR promedio del día anterior
+    #   2. Mecha > 50% del cuerpo de la vela (barrido de liquidez, no vela tendencial)
+    #      mecha_total = high - low
+    #      cuerpo      = |close - open|
+    #      condición   : mecha > 0.5 × cuerpo  (si cuerpo = 0 usamos ATR como proxy)
+    atr_ratio  = atr_curr / atr_prev.replace(0, np.nan)
+    high       = df["high"]
+    low        = df["low"]
+    open_price = df["open"]
+    mecha      = high - low
+    cuerpo     = (close - open_price).abs().replace(0, atr_curr)  # evitar div/0
+    cond_mecha_caotica = mecha > (0.5 * cuerpo)
+    cond_vol_spike = (atr_ratio > ATR_SPIKE_MULTIPLIER) & cond_mecha_caotica
 
     # Régimen 1: tendencia fuerte
     precio_sobre_ema  = close > ema_50
@@ -70,8 +82,8 @@ def label_regimes(df: pd.DataFrame) -> pd.DataFrame:
 
     # ── Etiquetado con prioridad 2 → 1 → 0 ───────────────
     regime = pd.Series(0, index=df.index, dtype=int)  # default: 0 (zona gris → conservador)
-    regime = regime.where(~cond_range,  0)  # Régimen 0
-    regime = regime.where(~cond_trend,  1)  # Régimen 1 (sobreescribe 0)
+    regime = regime.where(~cond_range,   0)  # Régimen 0
+    regime = regime.where(~cond_trend,   1)  # Régimen 1 (sobreescribe 0)
     regime = regime.where(~cond_vol_spike, 2)  # Régimen 2 (sobreescribe todo)
 
     df["target_regime"]    = regime
@@ -115,8 +127,8 @@ def get_feature_columns() -> list[str]:
         "feature_vwap_distance",
         "feature_rsi_slope",
         "feature_adx",
+        "feature_adx_slope",          # aceleración del ADX — diferencia pánico de tendencia
         "feature_volume_zscore",
-        "feature_atr_ratio",   # clave para detectar Régimen 2
         # Features de micro-estructura (3m resampleado)
         "feature_volatility_ratio_micro",
         "feature_volume_zscore_micro",
