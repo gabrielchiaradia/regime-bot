@@ -238,6 +238,10 @@ def build_features(
     df["bb_lower"] = bb_lower
     df["ema_50"]   = df["close"].ewm(span=50, adjust=False).mean()
 
+    # ATR ratio como feature explícita (clave para Régimen 2)
+    # Anti-leakage: usa atr_prev_day_mean que ya está shifteado
+    df["feature_atr_ratio"] = atr14 / daily_atr_mean.replace(0, np.nan)
+
     # ── 4. Merge con micro-estructura de 3m ───────────────
     df = df.join(micro_features, how="left", rsuffix="_3m")
 

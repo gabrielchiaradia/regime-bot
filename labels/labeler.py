@@ -74,9 +74,11 @@ def label_regimes(df: pd.DataFrame) -> pd.DataFrame:
     regime = regime.where(~cond_trend,  1)  # Régimen 1 (sobreescribe 0)
     regime = regime.where(~cond_vol_spike, 2)  # Régimen 2 (sobreescribe todo)
 
-    df["target_regime"]  = regime
-    df["_atr_ratio"]     = atr_ratio       # diagnóstico
-    df["_precio_vs_ema"] = close - ema_50  # diagnóstico
+    df["target_regime"]    = regime
+    df["_atr_ratio"]       = atr_ratio       # diagnóstico
+    df["_precio_vs_ema"]   = close - ema_50  # diagnóstico
+    # Exponer como feature explícita para el modelo
+    df["feature_atr_ratio"] = atr_ratio
 
     # ── Estadísticas de distribución ──────────────────────
     counts = regime.value_counts().sort_index()
@@ -114,6 +116,7 @@ def get_feature_columns() -> list[str]:
         "feature_rsi_slope",
         "feature_adx",
         "feature_volume_zscore",
+        "feature_atr_ratio",   # clave para detectar Régimen 2
         # Features de micro-estructura (3m resampleado)
         "feature_volatility_ratio_micro",
         "feature_volume_zscore_micro",
