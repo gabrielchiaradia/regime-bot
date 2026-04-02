@@ -85,8 +85,10 @@ def _fetch_klines(
     ])
 
     # Tipos
-    df["open_time"]  = pd.to_datetime(df["open_time"].astype(int), unit="ms", utc=True)
-    df["close_time"] = pd.to_datetime(df["close_time"].astype(int), unit="ms", utc=True)
+    # Nota: usar int64 explícito — en Windows astype(int) trunca a int32
+    # causando overflow en timestamps de Binance (ms epoch > 2^31)
+    df["open_time"]  = pd.to_datetime(df["open_time"].astype("int64"), unit="ms", utc=True)
+    df["close_time"] = pd.to_datetime(df["close_time"].astype("int64"), unit="ms", utc=True)
     for col in ["open", "high", "low", "close", "volume", "quote_volume"]:
         df[col] = df[col].astype(float)
 
