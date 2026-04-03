@@ -47,7 +47,7 @@ logger = logging.getLogger("run_bot")
 SYMBOL          = os.getenv("SYMBOL", "ETHUSDT")
 CANDLES_15M     = int(os.getenv("CANDLES_LIVE_15M", "500"))
 CANDLES_3M      = int(os.getenv("CANDLES_LIVE_3M",  "500"))
-MODEL_PATH      = Path(os.getenv("MODELS_DIR", "models")) / "regime_model.pkl"
+MODEL_PATH      = Path(os.getenv("MODELS_DIR", "models")) / f"regime_model_{os.getenv('SYMBOL', 'ETHUSDT')}.pkl"
 CYCLE_SECONDS   = int(os.getenv("CYCLE_SECONDS", "900"))  # 15 min = 900s
 
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN", "")
@@ -91,7 +91,7 @@ def main() -> None:
     logger.info("=" * 60)
 
     # ── Cargar modelo ──────────────────────────────────────
-    classifier = RegimeClassifier()
+    classifier = RegimeClassifier(symbol=SYMBOL)
     try:
         classifier.load_model()
     except FileNotFoundError as e:

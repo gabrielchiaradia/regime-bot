@@ -44,8 +44,12 @@ logger = logging.getLogger(__name__)
 
 # ── Configuración ──────────────────────────────────────────
 MODELS_DIR          = Path(os.getenv("MODELS_DIR", "models"))
-MODEL_PATH          = MODELS_DIR / "regime_model.pkl"
-META_PATH           = MODELS_DIR / "regime_model_meta.json"
+
+def get_model_paths(symbol: str) -> tuple:
+    """Retorna (model_path, meta_path) con el símbolo en el nombre del archivo."""
+    model_path = MODELS_DIR / f"regime_model_{symbol}.pkl"
+    meta_path  = MODELS_DIR / f"regime_model_{symbol}_meta.json"
+    return model_path, meta_path
 MIN_ACCURACY        = float(os.getenv("MIN_ACCURACY", "0.60"))  # umbral para guardar
 N_ESTIMATORS        = int(os.getenv("N_ESTIMATORS", "300"))
 MAX_DEPTH           = int(os.getenv("MAX_DEPTH", "8"))
@@ -53,7 +57,7 @@ N_CV_SPLITS         = int(os.getenv("N_CV_SPLITS", "5"))
 TRAIN_RATIO         = float(os.getenv("TRAIN_RATIO", "0.80"))   # 80% train, 20% test final
 
 
-def train(df: pd.DataFrame) -> dict:
+def train(df: pd.DataFrame, symbol: str = "ETHUSDT") -> dict:
     """
     Entrena el modelo y lo guarda si supera el umbral de accuracy.
 
@@ -67,6 +71,7 @@ def train(df: pd.DataFrame) -> dict:
         ValueError si el accuracy no supera MIN_ACCURACY (no guarda el modelo)
     """
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    model_path, meta_path = get_model_paths(symbol)
 
     feature_cols = get_feature_columns()
 
@@ -148,11 +153,12 @@ def train(df: pd.DataFrame) -> dict:
         raise ValueError(msg)
 
     # Serializar modelo
-    joblib.dump(final_model, MODEL_PATH)
-    logger.info("OK Modelo guardado: %s", MODEL_PATH)
+    joblib.dump(final_model, model_path)
+    logger.info("OK Modelo guardado: %s", model_path)
 
     # Metadata
     meta = {
+        "symbol":           symbol,
         "trained_at":       datetime.now(timezone.utc).isoformat(),
         "sklearn_version":  sklearn.__version__,
         "n_samples":        int(len(X)),
@@ -170,7 +176,7 @@ def train(df: pd.DataFrame) -> dict:
             "class_weight": "balanced",
         },
     }
-    META_PATH.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
-    logger.info("OK Metadata guardada: %s", META_PATH)
+    meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
+    logger.info("OK Metadata guardada: %s", meta_path)
 
     return meta

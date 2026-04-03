@@ -42,8 +42,6 @@ logger = logging.getLogger(__name__)
 
 # ── Configuración ──────────────────────────────────────────
 MODELS_DIR           = Path(os.getenv("MODELS_DIR", "models"))
-MODEL_PATH           = MODELS_DIR / "regime_model.pkl"
-META_PATH            = MODELS_DIR / "regime_model_meta.json"
 REGIME_CONFIRMATION  = int(os.getenv("REGIME_CONFIRMATION", "3"))   # velas para confirmar cambio
 WARMUP_CANDLES_LIVE  = int(os.getenv("WARMUP_CANDLES_LIVE", "250")) # warmup para inferencia
 REGIME2_PROBA_THRESHOLD = float(os.getenv("REGIME2_PROBA_THRESHOLD", "0.70"))  # confianza mínima para activar Régimen 2
@@ -67,10 +65,14 @@ class RegimeClassifier:
         _meta               : metadata del entrenamiento
     """
 
-    def __init__(self) -> None:
+    def __init__(self, symbol: str = "ETHUSDT") -> None:
+        self._symbol             = symbol
         self._model              = None
         self._meta:  dict        = {}
         self._feature_cols: list = get_feature_columns()
+
+        self._model_path = MODELS_DIR / f"regime_model_{symbol}.pkl"
+        self._meta_path  = MODELS_DIR / f"regime_model_{symbol}_meta.json"
 
         self._current_regime:   int = 0   # arrancamos asumiendo lateral (conservador)
         self._candidate_regime: int = 0
@@ -85,17 +87,17 @@ class RegimeClassifier:
         Carga el modelo y la metadata desde disco.
         Verifica compatibilidad de sklearn y features.
         """
-        if not MODEL_PATH.exists():
+        if not self._model_path.exists():
             raise FileNotFoundError(
-                f"No se encontró el modelo en {MODEL_PATH}. "
-                "Ejecutá run_pipeline.py primero."
+                f"No se encontro el modelo en {self._model_path}. "
+                f"Ejecuta: python scripts/run_pipeline.py --symbol {self._symbol}"
             )
 
-        self._model = joblib.load(MODEL_PATH)
-        logger.info("✅ Modelo cargado: %s", MODEL_PATH)
+        self._model = joblib.load(self._model_path)
+        logger.info("OK Modelo cargado: %s", self._model_path)
 
-        if META_PATH.exists():
-            self._meta = json.loads(META_PATH.read_text())
+        if self._meta_path.exists():
+            self._meta = json.loads(self._meta_path.read_text())
             self._validate_compatibility()
         else:
             logger.warning("No se encontró metadata (%s). Continuando sin validación.", META_PATH)

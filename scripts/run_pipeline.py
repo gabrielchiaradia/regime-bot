@@ -21,8 +21,6 @@ USO:
 """
 
 from __future__ import annotations
-from dotenv import load_dotenv
-load_dotenv()
 
 import argparse
 import logging
@@ -137,7 +135,7 @@ def main() -> None:
     # ── 4. Entrenamiento ───────────────────────────────────
     logger.info("[4/5] Entrenando modelo...")
     try:
-        meta = train(df_labeled)
+        meta = train(df_labeled, symbol=args.symbol)
     except ValueError as e:
         # Accuracy por debajo del umbral — modelo NO guardado
         msg = f"WARN Modelo no guardado: {e}"
