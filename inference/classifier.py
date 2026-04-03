@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 # ── Configuración ──────────────────────────────────────────
 MODELS_DIR           = Path(os.getenv("MODELS_DIR", "models"))
 REGIME_CONFIRMATION  = int(os.getenv("REGIME_CONFIRMATION", "3"))   # velas para confirmar cambio
-WARMUP_CANDLES_LIVE  = int(os.getenv("WARMUP_CANDLES_LIVE", "250")) # warmup para inferencia
+WARMUP_CANDLES_LIVE  = int(os.getenv("WARMUP_CANDLES_LIVE", "50"))  # warmup para inferencia (menor que training)
 REGIME2_PROBA_THRESHOLD = float(os.getenv("REGIME2_PROBA_THRESHOLD", "0.70"))  # confianza mínima para activar Régimen 2
 
 REGIME_NAMES = {
@@ -200,7 +200,9 @@ class RegimeClassifier:
         df_features = build_features(df_3m, df_15m, warmup_candles=WARMUP_CANDLES_LIVE)
 
         # Tomar solo la última fila (última vela completada)
+        # .values evita el warning de sklearn sobre feature names
         last_row = df_features[self._feature_cols].iloc[[-1]]
+        last_row_values = last_row.values
 
         # Verificar NaN
         if last_row.isnull().any().any():
@@ -208,8 +210,8 @@ class RegimeClassifier:
             logger.warning("NaN en features: %s → manteniendo régimen actual", nan_cols)
             return self._current_regime
 
-        proba      = self._model.predict_proba(last_row)[0]
-        raw_pred   = int(self._model.predict(last_row)[0])
+        proba      = self._model.predict_proba(last_row_values)[0]
+        raw_pred   = int(self._model.predict(last_row_values)[0])
 
         # ── Probability Thresholding para Régimen 2 ───────
         # El modelo solo activa Régimen 2 si está >= REGIME2_PROBA_THRESHOLD seguro.
