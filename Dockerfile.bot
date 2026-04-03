@@ -13,10 +13,10 @@ COPY . .
 
 RUN mkdir -p logs models
 
-ENV SYMBOL=ETHUSDT
+ENV SYMBOLS=ETHUSDT,BTCUSDT,SOLUSDT
 ENV REGIME_CONFIRMATION=3
 ENV CANDLES_LIVE_15M=500
 ENV CANDLES_LIVE_3M=500
 ENV MODELS_DIR=models
 
-CMD ["python", "scripts/run_bot.py"]
+CMD ["python3", "scripts/run_bot.py"]

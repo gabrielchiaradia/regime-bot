@@ -27,6 +27,12 @@ if hasattr(sys.stderr, "reconfigure"):
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # no instalado, usar variables del entorno
+
 from data.fetcher import fetch_live_data
 from inference.classifier import RegimeClassifier
 from orchestrator.router import build_default_router, REGIME_NAMES
