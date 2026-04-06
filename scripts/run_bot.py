@@ -33,6 +33,7 @@ try:
 except ImportError:
     pass  # no instalado, usar variables del entorno
 
+import json
 from data.fetcher import fetch_live_data
 from inference.classifier import RegimeClassifier
 from orchestrator.router import build_default_router, REGIME_NAMES
@@ -56,6 +57,7 @@ CANDLES_3M    = int(os.getenv("CANDLES_LIVE_3M",  "500"))
 MODELS_DIR    = Path(os.getenv("MODELS_DIR", "models"))
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+REGIME_STATE_PATH = Path(os.getenv("REGIME_STATE_PATH", "/shared/regime_state.json"))
 REGIME_EMOJIS = {0: "Lateral", 1: "Tendencia", 2: "AltaVol"}
 
 
@@ -80,6 +82,27 @@ def _wait_for_next_candle() -> None:
     wait_seconds = wait_minutes * 60 - now.second + 2
     logger.info("Proxima vela en %dm %ds", wait_minutes, now.second)
     time.sleep(max(wait_seconds, 1))
+
+
+def _write_regime_state(regimes: dict) -> None:
+    """
+    Escribe el estado actual de regimenes en un JSON compartido.
+    Los bots VWAP leen este archivo para decidir que estrategia usar.
+    Path configurable via REGIME_STATE_PATH (default: /shared/regime_state.json)
+    """
+    import json as _json
+    state_path = Path(os.getenv("REGIME_STATE_PATH", "/shared/regime_state.json"))
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state = {
+            symbol: int(regime)
+            for symbol, regime in regimes.items()
+        }
+        state["updated_at"] = datetime.now(timezone.utc).isoformat()
+        state_path.write_text(_json.dumps(state, indent=2))
+        logger.debug("regime_state.json actualizado: %s", state)
+    except Exception as e:
+        logger.warning("No se pudo escribir regime_state.json: %s", e)
 
 
 def _process_symbol(symbol, classifier, router, prev_regimes):
@@ -108,6 +131,20 @@ def _process_symbol(symbol, classifier, router, prev_regimes):
         router.run_strategy(new_regime)
 
     return new_regime, (new_regime != previous)
+
+
+def _write_regime_state(regimes: dict) -> None:
+    """
+    Escribe el estado actual de regímenes en un JSON compartido.
+    Lo leen los bots VWAP para elegir su estrategia.
+    Formato: {"ETHUSDT": 0, "BTCUSDT": 1, "SOLUSDT": 0, "updated_at": "..."}
+    """
+    try:
+        REGIME_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        data = {**regimes, "updated_at": datetime.now(timezone.utc).isoformat()}
+        REGIME_STATE_PATH.write_text(json.dumps(data, indent=2))
+    except Exception as e:
+        logger.warning("Error escribiendo regime_state.json: %s", e)
 
 
 def main() -> None:
@@ -172,6 +209,9 @@ def main() -> None:
                     prev_label = REGIME_EMOJIS.get(prev_regimes[symbol], str(prev_regimes[symbol]))
                     cambios.append(f"`{symbol}`: {prev_label} -> {label}")
                     prev_regimes[symbol] = new_regime
+
+            # Escribir estado actual para que los bots VWAP lo lean
+            _write_regime_state(prev_regimes)
 
             if cambios:
                 msg  = "*Cambio de regimen*\n" + "\n".join(cambios)
