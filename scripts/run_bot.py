@@ -58,7 +58,7 @@ MODELS_DIR    = Path(os.getenv("MODELS_DIR", "models"))
 TELEGRAM_TOKEN   = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 REGIME_STATE_PATH = Path(os.getenv("REGIME_STATE_PATH", "/shared/regime_state.json"))
-REGIME_EMOJIS = {0: "Lateral", 1: "Tendencia", 2: "AltaVol"}
+REGIME_EMOJIS = {0: "⚪ Lateral", 1: "📈 Tendencia", 2: "⚡ AltaVol"}
 
 
 def _send_telegram(msg: str) -> None:
@@ -86,23 +86,16 @@ def _wait_for_next_candle() -> None:
 
 def _write_regime_state(regimes: dict) -> None:
     """
-    Escribe el estado actual de regimenes en un JSON compartido.
-    Los bots VWAP leen este archivo para decidir que estrategia usar.
-    Path configurable via REGIME_STATE_PATH (default: /shared/regime_state.json)
+    Escribe el estado actual de regímenes en un JSON compartido.
+    Lo leen los bots VWAP para elegir su estrategia.
+    Formato: {"ETHUSDT": 0, "BTCUSDT": 1, "SOLUSDT": 0, "updated_at": "..."}
     """
-    import json as _json
-    state_path = Path(os.getenv("REGIME_STATE_PATH", "/shared/regime_state.json"))
     try:
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-        state = {
-            symbol: int(regime)
-            for symbol, regime in regimes.items()
-        }
-        state["updated_at"] = datetime.now(timezone.utc).isoformat()
-        state_path.write_text(_json.dumps(state, indent=2))
-        logger.debug("regime_state.json actualizado: %s", state)
+        REGIME_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        data = {**regimes, "updated_at": datetime.now(timezone.utc).isoformat()}
+        REGIME_STATE_PATH.write_text(json.dumps(data, indent=2))
     except Exception as e:
-        logger.warning("No se pudo escribir regime_state.json: %s", e)
+        logger.warning("Error escribiendo regime_state.json: %s", e)
 
 
 def _process_symbol(symbol, classifier, router, prev_regimes):
@@ -133,20 +126,6 @@ def _process_symbol(symbol, classifier, router, prev_regimes):
     return new_regime, (new_regime != previous)
 
 
-def _write_regime_state(regimes: dict) -> None:
-    """
-    Escribe el estado actual de regímenes en un JSON compartido.
-    Lo leen los bots VWAP para elegir su estrategia.
-    Formato: {"ETHUSDT": 0, "BTCUSDT": 1, "SOLUSDT": 0, "updated_at": "..."}
-    """
-    try:
-        REGIME_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        data = {**regimes, "updated_at": datetime.now(timezone.utc).isoformat()}
-        REGIME_STATE_PATH.write_text(json.dumps(data, indent=2))
-    except Exception as e:
-        logger.warning("Error escribiendo regime_state.json: %s", e)
-
-
 def main() -> None:
     logger.info("=" * 60)
     logger.info("REGIME BOT MULTI-PAR | %s", ", ".join(SYMBOLS))
@@ -174,9 +153,10 @@ def main() -> None:
         sys.exit(1)
 
     _send_telegram(
-        "*Regime Bot iniciado*\n"
-        f"Pares: `{'`, `'.join(classifiers.keys())}`\n"
-        f"Confirmacion: {os.getenv('REGIME_CONFIRMATION', '3')} velas"
+        "🤖 *Regime Bot iniciado*\n"
+        "───────────────────\n"
+        f"📍 Pares: `{'`, `'.join(classifiers.keys())}`\n"
+        f"✅ Confirmación: {os.getenv('REGIME_CONFIRMATION', '3')} velas"
     )
 
     while True:
@@ -199,7 +179,7 @@ def main() -> None:
                     )
                 except Exception as e:
                     logger.error("[%s] Error: %s", symbol, e, exc_info=True)
-                    resumen.append(f"`{symbol}` ERROR")
+                    resumen.append(f"`{symbol}` ❌ ERROR")
                     continue
 
                 label = REGIME_EMOJIS.get(new_regime, str(new_regime))
@@ -207,24 +187,24 @@ def main() -> None:
 
                 if hubo_cambio:
                     prev_label = REGIME_EMOJIS.get(prev_regimes[symbol], str(prev_regimes[symbol]))
-                    cambios.append(f"`{symbol}`: {prev_label} -> {label}")
+                    cambios.append(f"`{symbol}`: {prev_label} → {label}")
                     prev_regimes[symbol] = new_regime
 
             # Escribir estado actual para que los bots VWAP lo lean
             _write_regime_state(prev_regimes)
 
             if cambios:
-                msg  = "*Cambio de regimen*\n" + "\n".join(cambios)
-                msg += "\n\n*Estado actual*\n" + "\n".join(resumen)
+                msg  = "🔄 *Cambio de régimen*\n───────────────────\n" + "\n".join(cambios)
+                msg += "\n\n📊 *Estado actual*\n" + "\n".join(resumen)
                 _send_telegram(msg)
 
         except KeyboardInterrupt:
             logger.info("Bot detenido manualmente.")
-            _send_telegram("Bot detenido manualmente.")
+            _send_telegram("🛑 Bot detenido manualmente.")
             break
         except Exception as e:
             logger.error("Error ciclo principal: %s", e, exc_info=True)
-            _send_telegram(f"Error: `{e}`")
+            _send_telegram(f"🚨 *Error:* `{e}`")
             time.sleep(30)
             continue
 
