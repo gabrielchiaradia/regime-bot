@@ -5,3 +5,8 @@ logs/
 __pycache__/
 *.pyc
 .DS_Store
+regime-bot/
+venv/
+*.pkl
+models/*.json
+logs/
